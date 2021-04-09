@@ -5,6 +5,8 @@ import hashlib
 import itertools
 import re
 import time
+# import codecs
+
 
 from .common import InfoExtractor
 from ..compat import (
@@ -339,12 +341,15 @@ class IqiyiIE(InfoExtractor):
     def _real_extract(self, url):
         webpage = self._download_webpage(
             url, 'temp_id', note='download video page')
-
+        # with codecs.open('a.txt', 'a', 'utf-8') as f:
+        #     f.write(webpage)
         # There's no simple way to determine whether an URL is a playlist or not
         # Sometimes there are playlist links in individual videos, so treat it
         # as a single video first
         tvid = self._search_regex(
-            r'data-(?:player|shareplattrigger)-tvid\s*=\s*[\'"](\d+)', webpage, 'tvid', default=None)
+            r'data-(?:player|shareplattrigger)-tvid\s*=\s*[\'"](\d+)', webpage, 'tvid', default=None) or \
+            self._search_regex(
+            r'tv(?:i|I)d=(.+?)\&', webpage, 'tvid', default=None)
         if tvid is None:
             playlist_result = self._extract_playlist(webpage)
             if playlist_result:
@@ -352,7 +357,9 @@ class IqiyiIE(InfoExtractor):
             raise ExtractorError('Can\'t find any video')
 
         video_id = self._search_regex(
-            r'data-(?:player|shareplattrigger)-videoid\s*=\s*[\'"]([a-f\d]+)', webpage, 'video_id')
+            r'data-(?:player|shareplattrigger)-videoid\s*=\s*[\'"]([a-f\d]+)', webpage, 'video_id', default=None) or \
+            self._search_regex(
+                r'\'vid\'\]\s*=\s*\"(.+?)\"', webpage, 'video_id')
 
         formats = []
         for _ in range(5):
@@ -385,7 +392,7 @@ class IqiyiIE(InfoExtractor):
         self._sort_formats(formats)
         title = (get_element_by_id('widget-videotitle', webpage)
                  or clean_html(get_element_by_attribute('class', 'mod-play-tit', webpage))
-                 or self._html_search_regex(r'<span[^>]+data-videochanged-title="word"[^>]*>([^<]+)</span>', webpage, 'title'))
+                 or self._html_search_regex(r'<title>([^<]+)</title>', webpage, 'title'))
 
         return {
             'id': video_id,
